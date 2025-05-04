@@ -7,7 +7,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Protect this route: only allow admins
   const session = await auth();
   if (!session?.user?.accessLevel || session.user.accessLevel !== "admin") {
-    redirect("/unauthorized");
+    // Redirect to / with error query param
+    redirect("/?error=unauthorized");
   }
 
   // Only render admin-specific content and tabs here
