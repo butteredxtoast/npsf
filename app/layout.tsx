@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { MainLayout } from "@/components/layout/main-layout";
 import AuthProvider from "@/components/auth/auth-provider";
+import Head from "next/head";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -20,6 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <Head>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
+      </Head>
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
