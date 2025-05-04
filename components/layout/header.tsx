@@ -13,7 +13,7 @@ import { SignOutButton } from "../auth/sign-out-button";
 import { Logo } from "@/components/icons/Logo";
 // import { ModeToggle } from "./mode-toggle"; // Will add later
 
-export function Header() {
+export function Header({ isAuthorized = false }: { isAuthorized?: boolean }) {
   const { data: session, status } = useSession(); // Get session
 
   return (
@@ -48,8 +48,8 @@ export function Header() {
               <Logo className="h-10 w-10 text-foreground" />
               <span className="sr-only">Fitness Group</span>
             </Link>
-            {/* Mobile Sidebar Content - reusing Sidebar component */}
-            <Sidebar className="border-none" /> 
+            {/* Mobile Sidebar Content - only if authorized */}
+            {isAuthorized && <Sidebar className="border-none" />}
           </nav>
         </SheetContent>
       </Sheet>
