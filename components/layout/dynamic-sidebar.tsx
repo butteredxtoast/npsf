@@ -2,7 +2,6 @@ import { getSidebar } from "@/lib/sidebar";
 import type { SidebarCategory } from "@/types/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
-import Link from "next/link";
 
 interface DynamicSidebarProps {
   className?: string;
@@ -54,9 +53,11 @@ export default async function DynamicSidebar({ className }: DynamicSidebarProps)
                 <span className="text-muted-foreground text-sm">No links</span>
               ) : (
                 cat.links.map((link) => (
-                  <Link
+                  <a
                     key={link.id}
                     href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="block px-2 py-1 rounded hover:bg-accent hover:text-accent-foreground transition text-sm"
                   >
                     {link.icon && (
@@ -65,7 +66,7 @@ export default async function DynamicSidebar({ className }: DynamicSidebarProps)
                       </span>
                     )}
                     {link.title}
-                  </Link>
+                  </a>
                 ))
               )}
             </div>
