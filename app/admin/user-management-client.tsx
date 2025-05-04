@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import type { AccessLevel, UserData } from "@/types/user";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface AdminUserManagementProps {
   initialUsers: UserData[];
@@ -19,6 +20,8 @@ export default function AdminUserManagement({ initialUsers, initialError }: Admi
   const [newLevel, setNewLevel] = useState<AccessLevel>("active");
   const [adding, setAdding] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch users from API
   const fetchUsers = async () => {
@@ -84,6 +87,26 @@ export default function AdminUserManagement({ initialUsers, initialError }: Admi
     }
   };
 
+  // Delete user
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await fetch("/api/admin/delete-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: deleteTarget.email }),
+    });
+    const { error } = await res.json();
+    if (!error) {
+      toast.success("User deleted");
+      setDeleteTarget(null);
+      fetchUsers();
+    } else {
+      toast.error(error);
+    }
+    setDeleting(false);
+  };
+
   return (
     <section id="users" className="mb-10">
       <h2 className="text-xl font-semibold mb-4">User Management</h2>
@@ -143,15 +166,14 @@ export default function AdminUserManagement({ initialUsers, initialError }: Admi
                     </Select>
                   </td>
                   <td className="p-2">
-                    {user.accessLevel !== "retired" && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleChangeLevel(user.email, "retired")}
-                      >
-                        Retire
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-2"
+                      onClick={() => setDeleteTarget(user)}
+                    >
+                      Delete
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -159,6 +181,24 @@ export default function AdminUserManagement({ initialUsers, initialError }: Admi
           </table>
         </div>
       )}
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open: boolean) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+          </DialogHeader>
+          <div>
+            Are you sure you want to <span className="text-red-600 font-semibold">permanently delete</span> <span className="font-mono">{deleteTarget?.email}</span>?<br />
+            <span className="text-muted-foreground">This action cannot be undone. If you just want to remove access, consider setting their access level to <b>retired</b> using the dropdown instead.</span>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 } 
