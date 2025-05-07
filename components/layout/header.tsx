@@ -3,9 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-import { Sidebar } from "./sidebar"; // Placeholder for mobile sidebar content
+import DynamicSidebar from "./dynamic-sidebar";
 import { ModeToggle } from "./mode-toggle"; // Import ModeToggle
 import { useSession } from "next-auth/react"; // Import useSession
 import { SignInButton } from "../auth/sign-in-button";
@@ -40,6 +41,9 @@ export function Header({ isAuthorized = false }: { isAuthorized?: boolean }) {
           </Button>
         </SheetTrigger>
         <SheetContent side="left">
+          <DialogTitle>
+            <span className="sr-only">Navigation Menu</span>
+          </DialogTitle>
           <nav className="grid gap-6 text-lg font-medium">
             <Link
               href="/"
@@ -49,7 +53,7 @@ export function Header({ isAuthorized = false }: { isAuthorized?: boolean }) {
               <span className="sr-only">Fitness Group</span>
             </Link>
             {/* Mobile Sidebar Content - only if authorized */}
-            {isAuthorized && <Sidebar className="border-none" />}
+            {isAuthorized && <DynamicSidebar className="border-none" />}
           </nav>
         </SheetContent>
       </Sheet>

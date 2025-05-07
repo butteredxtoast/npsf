@@ -1,5 +1,6 @@
-import { getSidebar } from "@/lib/sidebar";
-import type { SidebarCategory } from "@/types/sidebar";
+"use client";
+import { useState, useEffect } from "react";
+import type { SidebarCategory, SidebarData } from "@/types/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
 
@@ -7,8 +8,21 @@ interface DynamicSidebarProps {
   className?: string;
 }
 
-export default async function DynamicSidebar({ className }: DynamicSidebarProps) {
-  const { data, error } = await getSidebar();
+export default function DynamicSidebar({ className }: DynamicSidebarProps) {
+  const [data, setData] = useState<SidebarData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch sidebar data client-side from API
+  useEffect(() => {
+    fetch("/api/admin/sidebar/get")
+      .then((res) => res.json())
+      .then(({ data, error }) => {
+        setData(data);
+        setError(error);
+      })
+      .catch(() => setError("Failed to fetch sidebar data"));
+  }, []);
+
   const categories: SidebarCategory[] = data?.categories ?? [];
 
   if (error) {
