@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { AdminButton } from "@/components/ui/admin-button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,9 @@ export function Header({ isAuthorized = false }: { isAuthorized?: boolean }) {
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
         <div className="ml-auto flex-1 sm:flex-initial">
            <ModeToggle /> {/* Use ModeToggle */}
+        </div>
+        <div className="mlauto flex items-center gap-4">
+          <AdminButton />
         </div>
         <div className="ml-auto flex items-center gap-4">
           {status === "loading" ? (
