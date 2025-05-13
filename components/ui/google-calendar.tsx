@@ -8,7 +8,7 @@ export function GoogleCalendar() {
   const [error, setError] = useState(false);
   // The provided Google Calendar embed URL
   const calendarUrl =
-    "https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FLos_Angeles&showPrint=0&src=c2FuZnJhbmNpc2NvQG5vdmVtYmVyLXByb2plY3QuY29t&src=NnNkMjZvaWFiNTlyYzYzbGRnZW52bmwzdW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&src=ZW4udXNhI2hvbGlkYXlAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%23795548&color=%230B8043";
+    "https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=America%2FLos_Angeles&showPrint=0&src=c2FuZnJhbmNpc2NvQG5vdmVtYmVyLXByb2plY3QuY29t&src=NnNkMjZvaWFiNTlyYzYzbGRnZW52bmwzdW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&src=ZW4udXNhI2hvbGlkYXlAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%23795548&color=%230B8043";
 
   // Fallback: If iframe fails to load after 10 seconds, show error
   React.useEffect(() => {
