@@ -3,6 +3,15 @@ import { useState, useEffect } from "react";
 import type { SidebarCategory, SidebarData } from "@/types/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import { ModeToggle } from "@/components/layout/mode-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface DynamicSidebarProps {
   className?: string;
@@ -12,6 +21,9 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
   const [data, setData] = useState<SidebarData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const { data: session } = useSession();
+  const user = session?.user;
+  const isAdmin = user?.accessLevel === "admin";
 
   // Fetch sidebar data client-side from API
   useEffect(() => {
@@ -55,8 +67,8 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
   }
 
   return (
-    <nav className={`pb-12 ${className ?? ""}`}>
-      <div className="space-y-4 py-4">
+    <nav className={`flex flex-col h-full w-64 ${className ?? ""}`}>
+      <div className="flex-1 space-y-4 py-4">
         {categories.map((cat) => (
           <div key={cat.id} className="px-3 py-2">
             <div
@@ -102,6 +114,54 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
             )}
           </div>
         ))}
+      </div>
+      <div className="px-4 py-3 border-t flex items-center justify-start bg-background mt-auto">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded-full bg-muted p-2 hover:bg-accent transition flex items-center gap-2" aria-label="Open user menu">
+              {/* User avatar or initials */}
+              {user?.image ? (
+                <img src={user.image} alt={user.name || "User"} className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                <span className="block w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold">
+                  {user?.name ? user.name[0] : "?"}
+                </span>
+              )}
+              {user?.name && (
+                <span className="ml-2 max-w-[100px] truncate font-medium text-sm text-foreground">{user.name}</span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 p-2">
+            <div className="flex flex-col items-start gap-2">
+              <div className="flex items-center gap-2 w-full border-b pb-2 mb-2">
+                {user?.image ? (
+                  <img src={user.image} alt={user.name || "User"} className="w-8 h-8 rounded-full object-cover" />
+                ) : (
+                  <span className="block w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold">
+                    {user?.name ? user.name[0] : "?"}
+                  </span>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{user?.name || "User"}</div>
+                  <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+                </div>
+              </div>
+              <ModeToggle />
+              {isAdmin && (
+                <Link href="/admin" className="w-full px-2 py-1 rounded hover:bg-accent hover:text-accent-foreground transition text-sm font-medium">
+                  Admin Dashboard
+                </Link>
+              )}
+              <DropdownMenuItem
+                onClick={() => signOut()}
+                className="w-full text-left px-2 py-1 rounded hover:bg-destructive hover:text-destructive-foreground transition text-sm font-medium"
+              >
+                Sign Out
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </nav>
   );

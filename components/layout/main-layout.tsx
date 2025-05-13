@@ -1,4 +1,3 @@
-import { Header } from "./header";
 import DynamicSidebar from "./dynamic-sidebar";
 import { auth } from "@/auth";
 
@@ -7,14 +6,13 @@ export async function MainLayout({ children }: { children: React.ReactNode }) {
   const isAuthorized = session?.user?.accessLevel === "admin" || session?.user?.accessLevel === "active";
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Header isAuthorized={isAuthorized} />
-      <div className="flex flex-1">
-        {isAuthorized && (
-          <DynamicSidebar className="hidden lg:block w-64 border-r" />
-        )}
+    <>
+      {isAuthorized && (
+        <DynamicSidebar className="fixed inset-y-0 left-0 z-10 w-64 border-r bg-background hidden lg:flex" />
+      )}
+      <div className={`flex flex-col min-h-screen ${isAuthorized ? 'lg:ml-64' : ''}`}>
         <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
-    </div>
+    </>
   );
 } 
