@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import ReactQueryProvider from "@/components/ReactQueryProvider";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { MainLayout } from "@/components/layout/main-layout";
 import AuthProvider from "@/components/auth/auth-provider";
@@ -38,7 +39,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <MainLayout>{children}</MainLayout>
+            <ReactQueryProvider>
+              <MainLayout>{children}</MainLayout>
+            </ReactQueryProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

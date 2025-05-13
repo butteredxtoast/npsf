@@ -5,27 +5,127 @@ import type { SidebarData, SidebarLink } from "@/types/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-interface SidebarManagementClientProps {
-  initialSidebar: SidebarData | null;
-  initialError: string | null;
-}
+export default function SidebarManagementClient() {
+  const queryClient = useQueryClient();
+  const { data: sidebar, error, isLoading } = useQuery({
+    queryKey: ["sidebar"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/sidebar/get");
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json.data;
+    },
+    staleTime: 0,
+  });
 
-export default function SidebarManagementClient({ initialSidebar, initialError }: SidebarManagementClientProps) {
-  const [sidebar, setSidebar] = useState<SidebarData | null>(initialSidebar);
-  const [error, setError] = useState<string | null>(initialError);
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
   const [newLinkTitle, setNewLinkTitle] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [addingLinkCatId, setAddingLinkCatId] = useState<string | null>(null);
 
-  // Add category
-  const handleAddCategory = async (e: React.FormEvent) => {
+  // Add category mutation
+  const addCategoryMutation = useMutation({
+    mutationFn: async (category: { id: string; title: string; icon?: string; links: SidebarLink[] }) => {
+      const res = await fetch("/api/admin/sidebar/add-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar"] });
+      toast.success("Category added");
+      setNewCategoryTitle("");
+      setAddingCategory(false);
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      toast.error(message);
+      setAddingCategory(false);
+    },
+  });
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      const res = await fetch("/api/admin/sidebar/delete-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar"] });
+      toast.success("Category deleted");
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      toast.error(message);
+    },
+  });
+
+  // Add link mutation
+  const addLinkMutation = useMutation({
+    mutationFn: async ({ categoryId, link }: { categoryId: string; link: SidebarLink }) => {
+      const res = await fetch("/api/admin/sidebar/add-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId, link }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar"] });
+      toast.success("Link added");
+      setNewLinkTitle("");
+      setNewLinkUrl("");
+      setAddingLinkCatId(null);
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      toast.error(message);
+    },
+  });
+
+  // Delete link mutation
+  const deleteLinkMutation = useMutation({
+    mutationFn: async ({ categoryId, linkId }: { categoryId: string; linkId: string }) => {
+      const res = await fetch("/api/admin/sidebar/delete-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId, linkId }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar"] });
+      toast.success("Link deleted");
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      toast.error(message);
+    },
+  });
+
+  // Handlers
+  const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     setAddingCategory(true);
     if (!newCategoryTitle.trim()) {
-      setError("Category title required");
+      toast.error("Category title required");
       setAddingCategory(false);
       return;
     }
@@ -35,44 +135,17 @@ export default function SidebarManagementClient({ initialSidebar, initialError }
       icon: undefined,
       links: [],
     };
-    const res = await fetch("/api/admin/sidebar/add-category", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category }),
-    });
-    const { error } = await res.json();
-    if (!error) {
-      toast.success("Category added");
-      setSidebar(s => s ? { ...s, categories: [...s.categories, category] } : { categories: [category] });
-      setNewCategoryTitle("");
-    } else {
-      toast.error(error);
-      setError(error);
-    }
-    setAddingCategory(false);
+    addCategoryMutation.mutate(category);
   };
 
-  // Delete category
-  const handleDeleteCategory = async (categoryId: string) => {
-    const res = await fetch("/api/admin/sidebar/delete-category", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId }),
-    });
-    const { error } = await res.json();
-    if (!error) {
-      toast.success("Category deleted");
-      setSidebar(s => s ? { ...s, categories: s.categories.filter(c => c.id !== categoryId) } : s);
-    } else {
-      toast.error(error);
-    }
+  const handleDeleteCategory = (categoryId: string) => {
+    deleteCategoryMutation.mutate(categoryId);
   };
 
-  // Add link
-  const handleAddLink = async (e: React.FormEvent, categoryId: string) => {
+  const handleAddLink = (e: React.FormEvent, categoryId: string) => {
     e.preventDefault();
     if (!newLinkTitle.trim() || !newLinkUrl.trim()) {
-      setError("Link title and URL required");
+      toast.error("Link title and URL required");
       return;
     }
     const link: SidebarLink = {
@@ -81,49 +154,15 @@ export default function SidebarManagementClient({ initialSidebar, initialError }
       url: newLinkUrl,
       icon: undefined,
     };
-    const res = await fetch("/api/admin/sidebar/add-link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId, link }),
-    });
-    const { error } = await res.json();
-    if (!error) {
-      toast.success("Link added");
-      setSidebar(s => s ? {
-        ...s,
-        categories: s.categories.map(cat =>
-          cat.id === categoryId ? { ...cat, links: [...cat.links, link] } : cat
-        ),
-      } : s);
-      setNewLinkTitle("");
-      setNewLinkUrl("");
-      setAddingLinkCatId(null);
-    } else {
-      toast.error(error);
-      setError(error);
-    }
+    addLinkMutation.mutate({ categoryId, link });
   };
 
-  // Delete link
-  const handleDeleteLink = async (categoryId: string, linkId: string) => {
-    const res = await fetch("/api/admin/sidebar/delete-link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId, linkId }),
-    });
-    const { error } = await res.json();
-    if (!error) {
-      toast.success("Link deleted");
-      setSidebar(s => s ? {
-        ...s,
-        categories: s.categories.map(cat =>
-          cat.id === categoryId ? { ...cat, links: cat.links.filter(l => l.id !== linkId) } : cat
-        ),
-      } : s);
-    } else {
-      toast.error(error);
-    }
+  const handleDeleteLink = (categoryId: string, linkId: string) => {
+    deleteLinkMutation.mutate({ categoryId, linkId });
   };
+
+  if (isLoading) return <div>Loading sidebar...</div>;
+  if (error) return <div className="text-red-500 mb-4">Error loading sidebar: {error.message}</div>;
 
   return (
     <section id="sidebar">
@@ -138,16 +177,15 @@ export default function SidebarManagementClient({ initialSidebar, initialError }
         />
         <Button type="submit" disabled={addingCategory}>Add Category</Button>
       </form>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="space-y-6">
-        {sidebar?.categories.map(cat => (
+        {sidebar?.categories.map((cat: SidebarData["categories"][number]) => (
           <div key={cat.id} className="border rounded p-4">
             <div className="flex justify-between items-center mb-2">
               <span className="font-semibold text-lg">{cat.title}</span>
               <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(cat.id)}>Delete Category</Button>
             </div>
             <ul className="mb-2">
-              {cat.links.map(link => (
+              {cat.links.map((link: SidebarLink) => (
                 <li key={link.id} className="flex justify-between items-center py-1">
                   <span>
                     <a
