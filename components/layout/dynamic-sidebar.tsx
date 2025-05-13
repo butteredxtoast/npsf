@@ -67,7 +67,7 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
   }
 
   return (
-    <nav className={`flex flex-col h-full w-64 ${className ?? ""}`}>
+    <nav className={`flex flex-col h-full w-64 pt-14 ${className ?? ""}`}>
       <div className="flex-1 space-y-4 py-4">
         {categories.map((cat) => (
           <div key={cat.id} className="px-3 py-2">
