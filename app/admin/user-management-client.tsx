@@ -133,9 +133,6 @@ export default function AdminUserManagement({ initialUsers, initialError }: Admi
           Add User
         </Button>
       </form>
-      <Button variant="outline" className="mb-4" onClick={fetchUsers} disabled={loading}>
-        {loading ? "Refreshing..." : "Refresh"}
-      </Button>
       {error && <div className="text-red-500 mb-4">{error}</div>}
       {loading ? (
         <div>Loading users…</div>
