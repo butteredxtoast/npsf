@@ -1,9 +1,9 @@
 import { getUserData } from "@/lib/users";
 import { kvSmembers } from "@/lib/kv";
-import { getSidebar } from "@/lib/sidebar";
 import type { UserData } from "@/types/user";
 import AdminUserManagement from "./user-management-client";
 import SidebarManagementClient from "./sidebar-management-client";
+import DnDProvider from "@/components/DnDProvider";
 
 export default async function AdminPage() {
   // Fetch all users on the server
@@ -20,13 +20,12 @@ export default async function AdminPage() {
     users = userDataList;
   }
 
-  // Fetch sidebar data on the server
-  const { data: sidebarData, error: sidebarError } = await getSidebar();
-
   return (
     <>
       <AdminUserManagement initialUsers={users} initialError={setErrorMsg} />
-      <SidebarManagementClient initialSidebar={sidebarData} initialError={sidebarError} />
+      <DnDProvider>
+        <SidebarManagementClient />
+      </DnDProvider>
     </>
   );
 } 

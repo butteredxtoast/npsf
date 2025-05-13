@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import type { SidebarCategory, SidebarData } from "@/types/sidebar";
+import { useState } from "react";
+import type { SidebarCategory } from "@/types/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
@@ -12,35 +12,29 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
 
 interface DynamicSidebarProps {
   className?: string;
 }
 
 export default function DynamicSidebar({ className }: DynamicSidebarProps) {
-  const [data, setData] = useState<SidebarData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading } = useQuery({
+    queryKey: ["sidebar"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/sidebar/get");
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json.data;
+    },
+    staleTime: 0,
+  });
+
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const { data: session } = useSession();
   const user = session?.user;
   const isAdmin = user?.accessLevel === "admin";
-
-  // Fetch sidebar data client-side from API
-  useEffect(() => {
-    fetch("/api/admin/sidebar/get")
-      .then((res) => res.json())
-      .then(({ data, error }) => {
-        setData(data);
-        setError(error);
-        // Default all categories to expanded
-        if (data?.categories) {
-          setCollapsed(
-            Object.fromEntries(data.categories.map((cat: SidebarCategory) => [cat.id, false]))
-          );
-        }
-      })
-      .catch(() => setError("Failed to fetch sidebar data"));
-  }, []);
 
   const categories: SidebarCategory[] = data?.categories ?? [];
 
@@ -49,14 +43,15 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
   };
 
   if (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     return (
       <div className={className}>
-        <p className="text-red-500 p-4">Sidebar failed to load: {error}</p>
+        <p className="text-red-500 p-4">Sidebar failed to load: {errorMsg}</p>
       </div>
     );
   }
 
-  if (!data) {
+  if (isLoading || !data) {
     return (
       <div className={className}>
         <Skeleton className="h-8 w-3/4 mb-2" />
@@ -67,7 +62,7 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
   }
 
   return (
-    <nav className={`flex flex-col h-full w-64 ${className ?? ""}`}>
+    <nav className={`flex flex-col h-full w-64 pt-14 ${className ?? ""}`}>
       <div className="flex-1 space-y-4 py-4">
         {categories.map((cat) => (
           <div key={cat.id} className="px-3 py-2">
@@ -121,7 +116,7 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
             <button className="rounded-full bg-muted p-2 hover:bg-accent transition flex items-center gap-2" aria-label="Open user menu">
               {/* User avatar or initials */}
               {user?.image ? (
-                <img src={user.image} alt={user.name || "User"} className="w-8 h-8 rounded-full object-cover" />
+                <Image src={user.image} alt={user.name || "User"} className="w-8 h-8 rounded-full object-cover" width={32} height={32} unoptimized />
               ) : (
                 <span className="block w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold">
                   {user?.name ? user.name[0] : "?"}
@@ -136,7 +131,7 @@ export default function DynamicSidebar({ className }: DynamicSidebarProps) {
             <div className="flex flex-col items-start gap-2">
               <div className="flex items-center gap-2 w-full border-b pb-2 mb-2">
                 {user?.image ? (
-                  <img src={user.image} alt={user.name || "User"} className="w-8 h-8 rounded-full object-cover" />
+                  <Image src={user.image} alt={user.name || "User"} className="w-8 h-8 rounded-full object-cover" width={32} height={32} unoptimized />
                 ) : (
                   <span className="block w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold">
                     {user?.name ? user.name[0] : "?"}

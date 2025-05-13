@@ -2,6 +2,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Protect this route: only allow admins
@@ -14,7 +15,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Only render admin-specific content and tabs here
   return (
     <div className="max-w-4xl mx-auto w-full p-4">
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <Button asChild variant="outline">
+          <Link href="/dashboard">Back to Dashboard</Link>
+        </Button>
+      </div>
       <Tabs defaultValue="users" className="mb-6">
         <TabsList>
           <TabsTrigger value="users" asChild>
