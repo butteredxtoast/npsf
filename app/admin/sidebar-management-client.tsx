@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { SidebarData, SidebarLink } from "@/types/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDrag, useDrop } from "react-dnd";
+import { ItemTypes } from "@/types/dnd";
 
 export default function SidebarManagementClient() {
   const queryClient = useQueryClient();
@@ -22,9 +24,8 @@ export default function SidebarManagementClient() {
 
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
-  const [newLinkTitle, setNewLinkTitle] = useState("");
-  const [newLinkUrl, setNewLinkUrl] = useState("");
   const [addingLinkCatId, setAddingLinkCatId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<SidebarData["categories"]>(sidebar?.categories || []);
 
   // Add category mutation
   const addCategoryMutation = useMutation({
@@ -88,8 +89,6 @@ export default function SidebarManagementClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sidebar"] });
       toast.success("Link added");
-      setNewLinkTitle("");
-      setNewLinkUrl("");
       setAddingLinkCatId(null);
     },
     onError: (err: unknown) => {
@@ -120,6 +119,28 @@ export default function SidebarManagementClient() {
     },
   });
 
+  // Add setSidebarMutation for persisting order
+  const setSidebarMutation = useMutation({
+    mutationFn: async (newSidebar: SidebarData) => {
+      const res = await fetch("/api/admin/sidebar/set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sidebarData: newSidebar }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar"] });
+      toast.success("Sidebar order updated");
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      toast.error(message);
+    },
+  });
+
   // Handlers
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,24 +163,164 @@ export default function SidebarManagementClient() {
     deleteCategoryMutation.mutate(categoryId);
   };
 
-  const handleAddLink = (e: React.FormEvent, categoryId: string) => {
-    e.preventDefault();
-    if (!newLinkTitle.trim() || !newLinkUrl.trim()) {
-      toast.error("Link title and URL required");
-      return;
-    }
-    const link: SidebarLink = {
-      id: newLinkTitle.toLowerCase().replace(/\s+/g, "-"),
-      title: newLinkTitle,
-      url: newLinkUrl,
-      icon: undefined,
-    };
-    addLinkMutation.mutate({ categoryId, link });
+  // Move category handler
+  const moveCategory = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const updated = [...categories];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    setCategories(updated);
+    // Persist to backend
+    if (sidebar) setSidebarMutation.mutate({ ...sidebar, categories: updated });
   };
 
-  const handleDeleteLink = (categoryId: string, linkId: string) => {
-    deleteLinkMutation.mutate({ categoryId, linkId });
+  // Move link handler
+  const moveLink = (catIndex: number, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const updated = [...categories];
+    const links = [...updated[catIndex].links];
+    const [moved] = links.splice(fromIndex, 1);
+    links.splice(toIndex, 0, moved);
+    updated[catIndex] = { ...updated[catIndex], links };
+    setCategories(updated);
+    // Persist to backend
+    if (sidebar) setSidebarMutation.mutate({ ...sidebar, categories: updated });
   };
+
+  // DnD Category component
+  function SidebarCategory({ cat, index }: { cat: SidebarData["categories"][number]; index: number }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [newLinkTitle, setNewLinkTitle] = useState("");
+    const [newLinkUrl, setNewLinkUrl] = useState("");
+    const [, drop] = useDrop({
+      accept: ItemTypes.CATEGORY,
+      hover(item: { index: number }) {
+        if (item.index !== index) {
+          moveCategory(item.index, index);
+          item.index = index;
+        }
+      },
+    });
+    const [{ isDragging }, drag] = useDrag({
+      type: ItemTypes.CATEGORY,
+      item: { id: cat.id, index },
+      collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    });
+    drag(drop(ref));
+
+    const handleAddLink = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newLinkTitle.trim() || !newLinkUrl.trim()) {
+        toast.error("Link title and URL required");
+        return;
+      }
+      const link: SidebarLink = {
+        id: newLinkTitle.toLowerCase().replace(/\s+/g, "-"),
+        title: newLinkTitle,
+        url: newLinkUrl,
+        icon: undefined,
+      };
+      addLinkMutation.mutate({ categoryId: cat.id, link }, {
+        onSuccess: () => {
+          setNewLinkTitle("");
+          setNewLinkUrl("");
+          setAddingLinkCatId(null);
+        }
+      });
+    };
+
+    return (
+      <div ref={ref} className="border rounded p-4" style={{ opacity: isDragging ? 0.5 : 1 }}>
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-semibold text-lg cursor-move">{cat.title}</span>
+          <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(cat.id)}>Delete Category</Button>
+        </div>
+        <ul className="mb-2">
+          {cat.links.map((link, linkIdx) => (
+            <SidebarLinkItem
+              key={link.id}
+              link={link}
+              catId={cat.id}
+              catIndex={index}
+              index={linkIdx}
+              moveLink={moveLink}
+            />
+          ))}
+        </ul>
+        {addingLinkCatId === cat.id ? (
+          <form onSubmit={handleAddLink} className="flex gap-2 mt-2">
+            <Input
+              type="text"
+              placeholder="Link title"
+              value={newLinkTitle}
+              onChange={e => setNewLinkTitle(e.target.value)}
+              className="w-40"
+            />
+            <Input
+              type="url"
+              placeholder="Link URL"
+              value={newLinkUrl}
+              onChange={e => setNewLinkUrl(e.target.value)}
+              className="w-64"
+            />
+            <Button type="submit">Add</Button>
+            <Button type="button" variant="outline" onClick={() => setAddingLinkCatId(null)}>Cancel</Button>
+          </form>
+        ) : (
+          <Button size="sm" onClick={() => setAddingLinkCatId(cat.id)}>Add Link</Button>
+        )}
+      </div>
+    );
+  }
+
+  // DnD Link component
+  function SidebarLinkItem({ link, catId, catIndex, index, moveLink }: {
+    link: SidebarLink;
+    catId: string;
+    catIndex: number;
+    index: number;
+    moveLink: (catIndex: number, fromIndex: number, toIndex: number) => void;
+  }) {
+    const ref = useRef<HTMLLIElement>(null);
+    const [, drop] = useDrop({
+      accept: ItemTypes.LINK,
+      hover(item: { index: number; catIndex: number }) {
+        if (item.catIndex === catIndex && item.index !== index) {
+          moveLink(catIndex, item.index, index);
+          item.index = index;
+        }
+      },
+    });
+    const [{ isDragging }, drag] = useDrag({
+      type: ItemTypes.LINK,
+      item: { id: link.id, index, catIndex },
+      collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    });
+    drag(drop(ref));
+    return (
+      <li ref={ref} className="flex justify-between items-center py-1" style={{ opacity: isDragging ? 0.5 : 1 }}>
+        <span className="cursor-move">
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-primary transition-colors"
+          >
+            {link.title}
+          </a>
+          <span className="text-muted-foreground"> ({link.url})</span>
+        </span>
+        <Button variant="destructive" size="sm" onClick={() => deleteLinkMutation.mutate({ categoryId: catId, linkId: link.id })}>Delete</Button>
+      </li>
+    );
+  }
+
+  // If sidebar data changes, update categories state
+  useEffect(() => {
+    if (sidebar?.categories && !addingLinkCatId && !addingCategory) {
+      setCategories(sidebar.categories);
+    }
+  }, [sidebar, addingLinkCatId, addingCategory]);
 
   if (isLoading) return <div>Loading sidebar...</div>;
   if (error) return <div className="text-red-500 mb-4">Error loading sidebar: {error.message}</div>;
@@ -178,53 +339,8 @@ export default function SidebarManagementClient() {
         <Button type="submit" disabled={addingCategory}>Add Category</Button>
       </form>
       <div className="space-y-6">
-        {sidebar?.categories.map((cat: SidebarData["categories"][number]) => (
-          <div key={cat.id} className="border rounded p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold text-lg">{cat.title}</span>
-              <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(cat.id)}>Delete Category</Button>
-            </div>
-            <ul className="mb-2">
-              {cat.links.map((link: SidebarLink) => (
-                <li key={link.id} className="flex justify-between items-center py-1">
-                  <span>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline hover:text-primary transition-colors"
-                    >
-                      {link.title}
-                    </a>
-                    <span className="text-muted-foreground"> ({link.url})</span>
-                  </span>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteLink(cat.id, link.id)}>Delete</Button>
-                </li>
-              ))}
-            </ul>
-            {addingLinkCatId === cat.id ? (
-              <form onSubmit={e => handleAddLink(e, cat.id)} className="flex gap-2 mt-2">
-                <Input
-                  type="text"
-                  placeholder="Link title"
-                  value={newLinkTitle}
-                  onChange={e => setNewLinkTitle(e.target.value)}
-                  className="w-40"
-                />
-                <Input
-                  type="url"
-                  placeholder="Link URL"
-                  value={newLinkUrl}
-                  onChange={e => setNewLinkUrl(e.target.value)}
-                  className="w-64"
-                />
-                <Button type="submit">Add</Button>
-                <Button type="button" variant="outline" onClick={() => setAddingLinkCatId(null)}>Cancel</Button>
-              </form>
-            ) : (
-              <Button size="sm" onClick={() => setAddingLinkCatId(cat.id)}>Add Link</Button>
-            )}
-          </div>
+        {categories.map((cat, idx) => (
+          <SidebarCategory key={cat.id} cat={cat} index={idx} />
         ))}
       </div>
     </section>

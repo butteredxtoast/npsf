@@ -3,6 +3,7 @@ import { kvSmembers } from "@/lib/kv";
 import type { UserData } from "@/types/user";
 import AdminUserManagement from "./user-management-client";
 import SidebarManagementClient from "./sidebar-management-client";
+import DnDProvider from "@/components/DnDProvider";
 
 export default async function AdminPage() {
   // Fetch all users on the server
@@ -22,7 +23,9 @@ export default async function AdminPage() {
   return (
     <>
       <AdminUserManagement initialUsers={users} initialError={setErrorMsg} />
-      <SidebarManagementClient />
+      <DnDProvider>
+        <SidebarManagementClient />
+      </DnDProvider>
     </>
   );
 } 
