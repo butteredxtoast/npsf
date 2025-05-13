@@ -11,8 +11,8 @@ import Head from "next/head";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Fitness Group Captain Dashboard",
-  description: "Dashboard for managing fitness group activities",
+  title: "NPSF Info",
+  description: "Website for all things NPSF",
 };
 
 export default function RootLayout({
